@@ -1,9 +1,3 @@
-# ================================================
-# Skeleton codes for HW4
-# Read the skeleton codes carefully and put all your
-# codes into main function
-# ================================================
-
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
@@ -14,17 +8,6 @@ from skimage.util import img_as_float
 import maxflow
 from scipy.spatial import Delaunay
 import sys
-
-def help_message():
-   print("Usage: [Input_Image] [Input_Marking] [Output_Directory]")
-   print("[Input_Image]")
-   print("Path to the input image")
-   print("[Input_Marking]")
-   print("Path to the input marking")
-   print("[Output_Directory]")
-   print("Output directory")
-   print("Example usages:")
-   print(sys.argv[0] + " astronaut.png " + "astronaut_marking.png " + "./")
 
 # Calculate the SLIC superpixels, their histograms and neighbors
 def superpixels_histograms_neighbors(img):
@@ -103,57 +86,102 @@ def do_graph_cut(fgbg_hists, fgbg_superpixels, norm_hists, neighbors):
     g.maxflow()
     return g.get_grid_segments(nodes)
 
-def RMSD(target, master):
-    # Note: use grayscale images only
 
-    # Get width, height, and number of channels of the master image
-    master_height, master_width = master.shape[:2]
-    master_channel = len(master.shape)
 
-    # Get width, height, and number of channels of the target image
-    target_height, target_width = target.shape[:2]
-    target_channel = len(target.shape)
+# ================== GUI ===================
 
-    # Validate the height, width and channels of the input image
-    if (master_height != target_height or master_width != target_width or master_channel != target_channel):
-        return -1
-    else:
-
-        total_diff = 0.0;
-        dst = cv2.absdiff(master, target)
-        dst = cv2.pow(dst, 2)
-        mean = cv2.mean(dst)
-        total_diff = mean[0]**(1/2.0)
-
-        return total_diff;
-
-if __name__ == '__main__':
-   
-    # validate the input arguments
-    if (len(sys.argv) != 4):
-        help_message()
-        sys.exit()
-
-    img = cv2.imread(sys.argv[1], cv2.IMREAD_COLOR)
-    img_marking = cv2.imread(sys.argv[2], cv2.IMREAD_COLOR)
-
-    # ======================================== #
-    # write all your codes here
+def mouse(event,x,y,flags,param):
     
-    
-    centers, color_hists, superpixels, neighbors = superpixels_histograms_neighbors(img)
-    fg_segments, bg_segments = find_superpixels_under_marking(img_marking, superpixels)
+    global l_button_down
+    global mode
+
+    if event == cv2.EVENT_LBUTTONDOWN:
+        l_button_down = True
+    if event == cv2.EVENT_LBUTTONUP:
+        l_button_down = False
+        recalculate_mask()
+
+    elif l_button_down:
+        draw_circle(x,y,mode)
+
+def draw_circle(x,y, mode = 0):
+    radius = 6
+    if mode == 0:
+        cv2.circle(input_mask,(x,y),radius,(0,0,255),-1)
+        cv2.circle(img,(x,y),radius,(0,0,255),-1)
+    elif mode == 1:
+        cv2.circle(input_mask,(x,y),radius,(255,0,0),-1)
+        cv2.circle(img,(x,y),radius,(255,0,0),-1)
+
+
+def reset():
+    global img
+    global input_mask
+    global output_mask
+    print "reset"
+    img = original_img.copy()
+    input_mask = np.full(img.shape, 255, dtype = np.uint8)
+    output_mask = np.full(input_mask.shape[0:2], 255, dtype = np.uint8)
+
+def recalculate_mask():
+    print "compute mask"
+    global output_mask
+    fg_segments, bg_segments = find_superpixels_under_marking(input_mask, superpixels)
     fg_cumulative_hist = cumulative_histogram_for_superpixels(fg_segments, color_hists)
     bg_cumulative_hist = cumulative_histogram_for_superpixels(bg_segments, color_hists)
     norm_hists = normalize_histograms(color_hists)
     fgbg_hists = [fg_cumulative_hist, bg_cumulative_hist]
     fgbg_superpixels = [fg_segments, bg_segments]
     graph_cut = do_graph_cut(fgbg_hists, fgbg_superpixels, norm_hists, neighbors)
-    
-    mask = np.zeros(img_marking.shape[0:2], dtype = np.uint8)# dummy assignment for mask, change it to your result
+    output_mask = np.zeros(input_mask.shape[0:2], dtype = np.uint8)
     for i in range(graph_cut.shape[0]):
-        mask[superpixels == i] = 255 if graph_cut[i] else 0
-    # ======================================== #
+        output_mask[superpixels == i] = 255 if graph_cut[i] else 0
 
-    output_name = sys.argv[3] + "mask.png"
-    cv2.imwrite(output_name, mask);
+
+def main():
+    # flags
+    print "Press F, then start to draw red lines\nPress B, then start to draw blue lines\nPress C to clear all lines"
+    global img
+    global input_mask
+    global output_mask
+    global centers, color_hists, superpixels, neighbors
+    global mode
+    global l_button_down, r_button_down
+    global original_img
+
+    mode = 0
+    l_button_down = False
+    m_button_down = False
+
+    original_img = cv2.imread(sys.argv[1], cv2.IMREAD_COLOR)
+    centers, color_hists, superpixels, neighbors = superpixels_histograms_neighbors(original_img)
+
+
+    img = original_img.copy()
+    input_mask = np.full(img.shape, 255, dtype = np.uint8)
+    output_mask = np.full(input_mask.shape[0:2], 255, dtype = np.uint8)
+
+    cv2.namedWindow('Image')
+    cv2.namedWindow('Segment')
+    cv2.setMouseCallback('Image',mouse)
+
+    while(1):
+        cv2.imshow('Image',img)
+        cv2.imshow('Segment',output_mask)
+        c = cv2.waitKey(33)
+        if c & 0xFF == 27:
+            break
+        elif c == 102:
+            mode = 0
+        elif c == 98:
+            mode = 1
+        elif c == 99:
+            reset()
+    cv2.destroyAllWindows()
+
+# Create a black image, a window and bind the function to window
+if __name__ == '__main__':
+    main()
+
+
+
