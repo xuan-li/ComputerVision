@@ -16,5 +16,6 @@ if __name__ == '__main__':
 		example_output = cv2.imread(root + "/example_output.png", cv2.IMREAD_GRAYSCALE)
 		output = cv2.imread(root + "/Results/mask.png", cv2.IMREAD_GRAYSCALE)
 		print "Error:", RMSD.RMSD(example_output, output)
-	else:
+	
+	elif sys.argv[1] == '2':
 		os.system("python "+root+"/Source/main_bonus.py "+root+"/TestData/astronaut.png")
