@@ -118,14 +118,17 @@ def reset():
     global img
     global input_mask
     global output_mask
+    global output_img
     print "reset"
     img = original_img.copy()
     input_mask = np.full(img.shape, 255, dtype = np.uint8)
     output_mask = np.full(input_mask.shape[0:2], 255, dtype = np.uint8)
+    output_img = original_img.copy()
 
 def recalculate_mask():
     print "compute mask"
     global output_mask
+    global output_img
     fg_segments, bg_segments = find_superpixels_under_marking(input_mask, superpixels)
     fg_cumulative_hist = cumulative_histogram_for_superpixels(fg_segments, color_hists)
     bg_cumulative_hist = cumulative_histogram_for_superpixels(bg_segments, color_hists)
@@ -136,14 +139,17 @@ def recalculate_mask():
     output_mask = np.zeros(input_mask.shape[0:2], dtype = np.uint8)
     for i in range(graph_cut.shape[0]):
         output_mask[superpixels == i] = 255 if graph_cut[i] else 0
+    output_img = original_img.copy()
+    output_img[output_mask == 0] = 0
 
 
 def main():
     # flags
-    print "Press F, then start to draw red lines\nPress B, then start to draw blue lines\nPress C to clear all lines"
+    print "Press F, then start to draw red lines\nPress B, then start to draw blue lines\nPress M to convert between mask and image\nPress C to clear all lines"
     global img
     global input_mask
     global output_mask
+    global output_img
     global centers, color_hists, superpixels, neighbors
     global mode
     global l_button_down, r_button_down
@@ -152,6 +158,7 @@ def main():
     mode = 0
     l_button_down = False
     m_button_down = False
+    show_foreground = True
 
     original_img = cv2.imread(sys.argv[1], cv2.IMREAD_COLOR)
     centers, color_hists, superpixels, neighbors = superpixels_histograms_neighbors(original_img)
@@ -160,6 +167,7 @@ def main():
     img = original_img.copy()
     input_mask = np.full(img.shape, 255, dtype = np.uint8)
     output_mask = np.full(input_mask.shape[0:2], 255, dtype = np.uint8)
+    output_img = original_img.copy()
 
     cv2.namedWindow('Image')
     cv2.namedWindow('Segment')
@@ -167,7 +175,10 @@ def main():
 
     while(1):
         cv2.imshow('Image',img)
-        cv2.imshow('Segment',output_mask)
+        if(show_foreground):
+            cv2.imshow('Segment',output_img)
+        else:
+            cv2.imshow('Segment',output_mask)
         c = cv2.waitKey(33)
         if c & 0xFF == 27:
             break
@@ -177,6 +188,9 @@ def main():
             mode = 1
         elif c == 99:
             reset()
+        elif c == 109:
+            show_foreground = not show_foreground
+
     cv2.destroyAllWindows()
 
 # Create a black image, a window and bind the function to window
