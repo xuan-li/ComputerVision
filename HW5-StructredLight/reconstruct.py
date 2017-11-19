@@ -62,9 +62,6 @@ def reconstruct_from_binary_patterns():
     with open("binary_codes_ids_codebook.pckl","r") as f:
         binary_codes_ids_codebook = pickle.load(f)
 
-    global camera_points
-    global projector_points
-    global colors
     colors = []
     camera_points = []
     projector_points = []
@@ -89,6 +86,7 @@ def reconstruct_from_binary_patterns():
 
             correspending_image[y, x] = np.array([0, projector_points[-1][1], projector_points[-1][0]])
             colors.append(original_image[y,x][::-1])
+
     colors = np.array(colors)
     #cv2.normalize(correspending_image,  correspending_image, 0, 255, cv2.NORM_MINMAX)
     #cv2.imshow("", np.array(correspending_image, dtype=np.uint8))
@@ -133,27 +131,29 @@ def reconstruct_from_binary_patterns():
     projector_points = projector_points[mask]
     points_3d = points_3d[mask]
     colors = colors[mask]
-    
+    assert(points_3d.shape[0] == colors.shape[0])
     return points_3d,colors
     
 def write_3d_points(points_3d, colors):
     
     # ===== DO NOT CHANGE THIS FUNCTION =====
-    
+
     print("write output point cloud")
     print(points_3d.shape)
     output_name = sys.argv[1] + "output.xyz"
     with open(output_name,"w") as f:
         for p in points_3d:
             f.write("%d %d %d\n"%(p[0,0],p[0,1],p[0,2]))
-    
-    #output_name = sys.argv[1] + "output.obj"
-    #with open(output_name,"w") as f:
-    #    for p,c in zip(points_3d, colors):
-    #        f.write("v %d %d %d %f %f %f\n"%(p[0,0],p[0,1],p[0,2], c[0], c[1], c[2]))
-            #f.write("v %d %d %d\n"%(p[0,0],p[0,1],p[0,2]))
+    output_name = sys.argv[1] + "output.xyzrgb"
+    with open(output_name,"w") as f:
+        for p,c in zip(points_3d, colors):
+            f.write("%d %d %d %d %d %d\n"%(p[0,0],p[0,1],p[0,2], c[0], c[1], c[2]))
 
-    return points_3d
+    output_name = sys.argv[1] + "output.obj"
+    with open(output_name,"w") as f:
+        for p,c in zip(points_3d, colors):
+            f.write("v %d %d %d %f %f %f\n"%(p[0,0],p[0,1],p[0,2], c[0]/255., c[1]/255., c[2]/255.))
+
     
 if __name__ == '__main__':
 
