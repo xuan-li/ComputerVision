@@ -86,12 +86,14 @@ def reconstruct_from_binary_patterns():
 
             correspending_image[y, x] = np.array([0, projector_points[-1][1], projector_points[-1][0]])
             colors.append(original_image[y,x][::-1])
-
     colors = np.array(colors)
-    #cv2.normalize(correspending_image,  correspending_image, 0, 255, cv2.NORM_MINMAX)
+    correspending_image[:,:,1] = correspending_image[:,:,1] / 800. * 255
+    correspending_image[:,:,2] = correspending_image[:,:,2] / 1280. * 255
+    cv2.normalize(correspending_image,  correspending_image, 0, 255, cv2.NORM_MINMAX)
     #cv2.imshow("", np.array(correspending_image, dtype=np.uint8))
     #cv2.waitKey()  
- 
+    correspondence_name = sys.argv[1] + "correspondence.jpg"
+    cv2.imwrite(correspondence_name, correspending_image)
     # now that we have 2D-2D correspondances, we can triangulate 3D points!
 
     # load the prepared stereo calibration between projector and camera
@@ -105,8 +107,6 @@ def reconstruct_from_binary_patterns():
         projector_t = d['projector_t']
 
 
-    #import pdb
-    #pdb.set_trace()
 
     camera_points = np.array(camera_points,dtype = np.float32)
     projector_points = np.array(projector_points, dtype = np.float32) 
@@ -126,7 +126,6 @@ def reconstruct_from_binary_patterns():
     points_3d = cv2.convertPointsFromHomogeneous(points_3d.transpose())
     mask = (points_3d[:,:,2] > 200) & (points_3d[:,:,2] < 1400)
     mask = mask.reshape((mask.shape[0],))
-
     camera_points = camera_points[mask]
     projector_points = projector_points[mask]
     points_3d = points_3d[mask]
@@ -149,10 +148,10 @@ def write_3d_points(points_3d, colors):
         for p,c in zip(points_3d, colors):
             f.write("%d %d %d %d %d %d\n"%(p[0,0],p[0,1],p[0,2], c[0], c[1], c[2]))
 
-    output_name = sys.argv[1] + "output.obj"
-    with open(output_name,"w") as f:
-        for p,c in zip(points_3d, colors):
-            f.write("v %d %d %d %f %f %f\n"%(p[0,0],p[0,1],p[0,2], c[0]/255., c[1]/255., c[2]/255.))
+    #output_name = sys.argv[1] + "output.obj"
+    #with open(output_name,"w") as f:
+    #    for p,c in zip(points_3d, colors):
+    #        f.write("v %d %d %d %f %f %f\n"%(p[0,0],p[0,1],p[0,2], c[0]/255., c[1]/255., c[2]/255.))
 
     
 if __name__ == '__main__':
