@@ -89,7 +89,7 @@ def reconstruct_from_binary_patterns():
     colors = np.array(colors)
     correspending_image[:,:,1] = correspending_image[:,:,1] / 800. * 255
     correspending_image[:,:,2] = correspending_image[:,:,2] / 1280. * 255
-    cv2.normalize(correspending_image,  correspending_image, 0, 255, cv2.NORM_MINMAX)
+    #cv2.normalize(correspending_image,  correspending_image, 0, 255, cv2.NORM_MINMAX)
     #cv2.imshow("", np.array(correspending_image, dtype=np.uint8))
     #cv2.waitKey()  
     correspondence_name = sys.argv[1] + "correspondence.jpg"
